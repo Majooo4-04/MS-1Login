@@ -19,103 +19,244 @@ import org.springframework.web.filter.CorsFilter;
 @Configuration
 public class SecurityConfig {
 
-    private static final String[] STAFF_ROLES = {"ADMIN", "SERVICIO", "VENTAS", "MARKETING"};
+    private static final String[] SERVICIO = {
+        "ADMIN",
+        "SERVICIO"
+    };
+
+    private static final String[] VENTAS = {
+        "ADMIN",
+        "VENTAS"
+    };
+
+    private static final String[] MARKETING = {
+        "ADMIN",
+        "MARKETING"
+    };
 
     @Bean
     public FilterRegistrationBean<CorsFilter> customCorsFilter() {
+
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+
+        config.setAllowedOrigins(
+            List.of("http://localhost:5173")
+        );
+
+        config.setAllowedMethods(
+            List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+            )
+        );
+
+        config.setAllowedHeaders(
+            List.of("*")
+        );
+
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        UrlBasedCorsConfigurationSource source =
+            new UrlBasedCorsConfigurationSource();
 
-        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
-        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        source.registerCorsConfiguration(
+            "/**",
+            config
+        );
+
+        FilterRegistrationBean<CorsFilter> bean =
+            new FilterRegistrationBean<>(
+                new CorsFilter(source)
+            );
+
+        bean.setOrder(
+            Ordered.HIGHEST_PRECEDENCE
+        );
+
         return bean;
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+        HttpSecurity http
+    ) throws Exception {
+
         http
-            // Apagamos el CORS de Spring Security: el filtro maestro de arriba ya lo maneja
             .cors(AbstractHttpConfigurer::disable)
+
             .csrf(AbstractHttpConfigurer::disable)
+
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/oauth2/**", "/login", "/.well-known/**").permitAll()
 
-                // /register: cualquier miembro del staff puede dar de alta a otro
-                .requestMatchers("/register").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    HttpMethod.OPTIONS,
+                    "/**"
+                ).permitAll()
 
-                // ========================================================
-                // RUTAS DE SERVICIOS Y CITAS
-                // ========================================================
-                .requestMatchers(HttpMethod.GET, "/api/public/servicios/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/public/citas-servicios").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/public/servicios").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/public/servicios/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.DELETE, "/api/public/servicios/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.GET, "/api/public/citas-servicios").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    "/oauth2/**",
+                    "/login",
+                    "/.well-known/**"
+                ).permitAll()
 
-                // ========================================================
-                // COTIZACIONES Y VEHÍCULOS
-                // ========================================================
-                .requestMatchers(HttpMethod.POST, "/api/cotizaciones").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/cotizaciones/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/cotizaciones/**").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/marcas/**",
+                    "/api/categorias/**",
+                    "/api/vehiculos/**"
+                ).permitAll()
 
-                .requestMatchers(HttpMethod.GET, "/api/vehiculos/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/vehiculos/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/vehiculos/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.DELETE, "/api/vehiculos/**").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    "/register"
+                ).hasAnyRole(
+                    "ADMIN",
+                    "SERVICIO",
+                    "VENTAS",
+                    "MARKETING"
+                )
 
-                // Cotizaciones de vehículos (variante /api/public/...)
-                .requestMatchers(HttpMethod.POST, "/api/public/cotizaciones-vehiculos").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/public/cotizaciones-vehiculos").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/public/cotizaciones-vehiculos/**").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/public/servicios/**"
+                ).permitAll()
 
-                // ========================================================
-                // NOTICIAS, PROMOCIONES, IMÁGENES
-                // ========================================================
-                .requestMatchers(HttpMethod.GET, "/api/noticias/**", "/api/promociones/**", "/api/imagenes/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/noticias/**", "/api/promociones/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/noticias/**", "/api/promociones/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.DELETE, "/api/noticias/**", "/api/promociones/**").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/public/citas-servicios"
+                ).permitAll()
 
-                // ========================================================
-                // CONTACTO
-                // ========================================================
-                .requestMatchers(HttpMethod.GET, "/api/comercial/contacto").permitAll()
-                .requestMatchers(HttpMethod.PUT, "/api/comercial/contacto").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    "/api/public/servicios/**",
+                    "/api/public/citas-servicios/**"
+                ).hasAnyRole(
+                    SERVICIO
+                )
 
-                // ========================================================
-                // ENTIDADES GENÉRICAS
-                // ========================================================
-                .requestMatchers(HttpMethod.GET, "/api/entity-a/**", "/api/entity-b/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.POST, "/api/entity-a/**", "/api/entity-b/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.PUT, "/api/entity-a/**", "/api/entity-b/**").hasAnyRole(STAFF_ROLES)
-                .requestMatchers(HttpMethod.DELETE, "/api/entity-a/**", "/api/entity-b/**").hasAnyRole(STAFF_ROLES)
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/cotizaciones",
+                    "/api/public/cotizaciones-vehiculos"
+                ).permitAll()
 
-                // Todo lo demás requiere sesión válida
-                .anyRequest().authenticated()
+                .requestMatchers(
+                    "/api/cotizaciones/**",
+                    "/api/public/cotizaciones-vehiculos/**"
+                ).hasAnyRole(
+                    VENTAS
+                )
+
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/vehiculos/**"
+                ).hasAnyRole(
+                    VENTAS
+                )
+
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/vehiculos/**"
+                ).hasAnyRole(
+                    VENTAS
+                )
+
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/vehiculos/**"
+                ).hasAnyRole(
+                    VENTAS
+                )
+
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/noticias/**",
+                    "/api/promociones/**",
+                    "/api/imagenes/**"
+                ).permitAll()
+
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/noticias/**",
+                    "/api/promociones/**",
+                    "/api/imagenes/**"
+                ).hasAnyRole(
+                    MARKETING
+                )
+
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/noticias/**",
+                    "/api/promociones/**",
+                    "/api/imagenes/**"
+                ).hasAnyRole(
+                    MARKETING
+                )
+
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/noticias/**",
+                    "/api/promociones/**",
+                    "/api/imagenes/**"
+                ).hasAnyRole(
+                    MARKETING
+                )
+
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/comercial/contacto"
+                ).permitAll()
+
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/comercial/contacto"
+                ).hasAnyRole(
+                    MARKETING
+                )
+
+                .requestMatchers(
+                    "/api/admin/**"
+                ).hasRole(
+                    "ADMIN"
+                )
+
+                .anyRequest()
+                .authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+
+            .oauth2ResourceServer(oauth2 ->
+                oauth2.jwt(jwt ->
+                    jwt.jwtAuthenticationConverter(
+                        jwtAuthenticationConverter()
+                    )
+                )
             );
 
         return http.build();
     }
 
-    private JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
-        grantedAuthoritiesConverter.setAuthorityPrefix("");
+    private JwtAuthenticationConverter
+    jwtAuthenticationConverter() {
 
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        return jwtAuthenticationConverter;
+        JwtGrantedAuthoritiesConverter converter =
+            new JwtGrantedAuthoritiesConverter();
+
+        converter.setAuthoritiesClaimName(
+            "roles"
+        );
+
+        converter.setAuthorityPrefix(
+            ""
+        );
+
+        JwtAuthenticationConverter jwt =
+            new JwtAuthenticationConverter();
+
+        jwt.setJwtGrantedAuthoritiesConverter(
+            converter
+        );
+
+        return jwt;
     }
 }

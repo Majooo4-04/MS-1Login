@@ -68,7 +68,7 @@ public class RegisterController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SERVICIO','VENTAS','MARKETING')")
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
         try {
